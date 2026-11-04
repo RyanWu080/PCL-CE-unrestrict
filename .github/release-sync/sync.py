@@ -15,7 +15,12 @@ UPSTREAM = 'PCL-Community/PCL-CE'
 DEST = 'RyanWu080/PCL-CE-unrestrict'
 MIN_VERSION = (2, 15, 1)
 POLICY = 'Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs'
-EXPECTED_BLOB = '252e4bb09b017285ca93cf3ccda5f177b2c2913a'
+# Exact upstream policies reviewed for the unrestricted replacement.
+EXPECTED_BLOBS = {
+    '252e4bb09b017285ca93cf3ccda5f177b2c2913a',  # Original restricted releases.
+    '3808741c26e439789086dcf3ad3c83867d53eaf7',  # WPF/Core split.
+    'cef7848c68a122660c17eee07a614008d2cc91a4',  # dev 16207f9: simplified region hint.
+}
 MARKER = 'unrestrict-build.json'
 ROOT = Path(__file__).resolve().parent
 
@@ -91,10 +96,15 @@ def scan():
 def run(*args, cwd=None, env=None):
     return subprocess.check_output(args, cwd=cwd, env=env, text=True).strip()
 
+def verify_policy(source, ref='HEAD'):
+    blob = run('git', 'rev-parse', f'{ref}:{POLICY}', cwd=source)
+    if blob not in EXPECTED_BLOBS:
+        raise RuntimeError(f'Upstream region policy changed ({blob}); review patch before publishing')
+
 def patch_source(source):
     path = source / POLICY
     if path.exists():
-        if run('git', 'hash-object', POLICY, cwd=source) != EXPECTED_BLOB:
+        if run('git', 'hash-object', POLICY, cwd=source) not in EXPECTED_BLOBS:
             raise RuntimeError('Upstream region policy changed; review patch before publishing')
         shutil.copyfile(ROOT / 'RestrictedFeaturePolicy.cs', path)
         return 'policy-disabled'

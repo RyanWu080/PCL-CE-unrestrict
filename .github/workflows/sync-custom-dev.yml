@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [dev]
-    paths: ['.github/workflows/sync-custom-dev.yml']
+    paths: ['.github/workflows/sync-custom-dev.yml', '.github/release-sync/**']
 
 permissions:
   contents: write
@@ -23,41 +23,30 @@ jobs:
     env:
       TARGET_BRANCH: custom/dev-unrestricted
       POLICY_COMMIT: 29aad1c3deac4c87975f18fd6a9de1f1d8614874
-      POLICY_PATH: Plain Craft Launcher 2/Modules/Minecraft/RestrictedFeaturePolicy.cs
     steps:
+      - name: Check out reviewed patch and synchronization scripts
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: automation
+          persist-credentials: false
       - name: Check out custom branch with full history
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: custom/dev-unrestricted
+          path: source
           fetch-depth: 0
 
       - name: Merge upstream and verify the dedicated policy patch
         shell: bash
+        working-directory: source
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git merge-base --is-ancestor "$POLICY_COMMIT" HEAD
-          expected_blob=$(git rev-parse "$POLICY_COMMIT:$POLICY_PATH")
-          test "$(git rev-parse "HEAD:$POLICY_PATH")" = "$expected_blob"
           git fetch --no-tags https://github.com/PCL-Community/PCL-CE.git refs/heads/dev
           upstream=$(git rev-parse FETCH_HEAD)
-          if git merge-base --is-ancestor "$upstream" HEAD; then
-            echo 'Already up to date; policy patch verified.' >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          if ! git merge --no-ff --no-commit "$upstream"; then
-            git merge --abort
-            echo '::error::Upstream merge conflicted. No changes were pushed; resolve manually.'
-            exit 1
-          fi
-          actual_blob=$(git rev-parse ":$POLICY_PATH")
-          if [ "$actual_blob" != "$expected_blob" ]; then
-            git merge --abort
-            echo '::error::Upstream changed the custom policy. No changes were pushed; review manually.'
-            exit 1
-          fi
-          git commit -m "Merge upstream dev at $upstream"
+          python3 ../automation/.github/release-sync/sync_branch.py "$upstream"
           git merge-base --is-ancestor "$POLICY_COMMIT" HEAD
           # Normal push rejects concurrent remote changes; never force-push.
           git push origin "HEAD:refs/heads/$TARGET_BRANCH"
