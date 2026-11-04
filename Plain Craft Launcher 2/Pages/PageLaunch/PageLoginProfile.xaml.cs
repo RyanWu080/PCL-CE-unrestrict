@@ -19,6 +19,7 @@ public partial class PageLoginProfile : IPageView
     {
         InitializeComponent();
         DataContext = _vm;
+        DialogServiceInstaller.Install(_vm);
         _vm.PropertyChanged += VmOnPropertyChanged;
         Loaded += (_, _) => Reload();
     }
@@ -32,7 +33,7 @@ public partial class PageLoginProfile : IPageView
     public void Reload()
     {
         _vm.ReloadCommand.Execute(null);
-        ModMain.frmLoginProfileSkin = null;
+        Launcher.frmLoginProfileSkin = null;
     }
 
     public void RefreshProfileList() => _vm.ReloadCommand.Execute(null);
@@ -56,7 +57,7 @@ public partial class PageLoginProfile : IPageView
         {
             Profile = profile;
             Info = ProfileUi.GetProfileInfo(profile);
-            var logoPath = ModBase.pathTemp + $@"Cache\Skin\Head\{profile.SkinHeadId}.png";
+            var logoPath = Common.pathTemp + $@"Cache\Skin\Head\{profile.SkinHeadId}.png";
             if (File.Exists(logoPath) && new FileInfo(logoPath).Length != 0L)
             {
                 Logo = logoPath;
@@ -80,31 +81,36 @@ public partial class PageLoginProfile : IPageView
     {
         if (sender is not MyListItem { DataContext: ProfileItem item }) return;
         _vm.Select(item);
-        ModMain.frmLaunchLeft.RefreshPage(true);
-        ModMain.frmLaunchLeft.BtnLaunch.IsEnabled = true;
+        Launcher.frmLaunchLeft.RefreshPage(true);
+        Launcher.frmLaunchLeft.BtnLaunch.IsEnabled = true;
     }
 
     private void ProfileContMenuBuild(MyListItem sender, EventArgs e)
     {
-        var btnEditUuid = new MyIconButton
-            { SvgIcon = "lucide/pencil", ToolTip = Lang.Text("Launch.Account.Profile.ChangeUuid"), Tag = sender.Tag };
+        // 更改 UUID
+        var btnEditUuid = new MyIconButton { SvgIcon = "lucide/pencil", Tag = sender.Tag };
+        btnEditUuid.SetLocalizedValue(FrameworkElement.ToolTipProperty, "Launch.Account.Profile.ChangeUuid");
         ToolTipService.SetPlacement(btnEditUuid, PlacementMode.Center);
         ToolTipService.SetVerticalOffset(btnEditUuid, 30d);
         ToolTipService.SetHorizontalOffset(btnEditUuid, 2d);
         btnEditUuid.Click += EditProfileUuid;
-        var btnCopyUuid = new MyIconButton
-            { SvgIcon = "lucide/copy", ToolTip = Lang.Text("Launch.Account.Profile.CopyUuid"), Tag = sender.Tag };
+        // 复制 UUID
+        var btnCopyUuid = new MyIconButton { SvgIcon = "lucide/copy", Tag = sender.Tag };
+        btnCopyUuid.SetLocalizedValue(FrameworkElement.ToolTipProperty, "Launch.Account.Profile.CopyUuid");
         ToolTipService.SetPlacement(btnCopyUuid, PlacementMode.Center);
         ToolTipService.SetVerticalOffset(btnCopyUuid, 30d);
         ToolTipService.SetHorizontalOffset(btnCopyUuid, 2d);
         btnCopyUuid.Click += CopyProfileUuid;
-        var btnEditServerName = new MyIconButton
-            { SvgIcon = "lucide/info", ToolTip = Lang.Text("Launch.Account.Profile.ChangeAuthServerName"), Tag = sender.Tag };
+        // 更改验证服务器名称
+        var btnEditServerName = new MyIconButton { SvgIcon = "lucide/info", Tag = sender.Tag };
+        btnEditServerName.SetLocalizedValue(FrameworkElement.ToolTipProperty, "Launch.Account.Profile.ChangeAuthServerName");
         ToolTipService.SetPlacement(btnEditServerName, PlacementMode.Center);
         ToolTipService.SetVerticalOffset(btnEditServerName, 30d);
         ToolTipService.SetHorizontalOffset(btnEditServerName, 2d);
         btnEditServerName.Click += EditProfileServer;
-        var btnDelete = new MyIconButton { SvgIcon = "lucide/trash-2", ToolTip = Lang.Text("Launch.Account.Profile.Delete"), Tag = sender.Tag };
+        // 删除档案
+        var btnDelete = new MyIconButton { SvgIcon = "lucide/trash-2", Tag = sender.Tag };
+        btnDelete.SetLocalizedValue(FrameworkElement.ToolTipProperty, "Launch.Account.Profile.Delete");
         ToolTipService.SetPlacement(btnDelete, PlacementMode.Center);
         ToolTipService.SetVerticalOffset(btnDelete, 30d);
         ToolTipService.SetHorizontalOffset(btnDelete, 2d);

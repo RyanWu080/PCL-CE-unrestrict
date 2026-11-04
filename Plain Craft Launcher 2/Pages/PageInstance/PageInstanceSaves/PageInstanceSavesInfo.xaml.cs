@@ -1,6 +1,6 @@
+using PCL.Core.App.Localization;
 using System.Windows;
 using System.Windows.Controls;
-using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -61,77 +61,43 @@ public partial class PageInstanceSavesInfo : IRefreshable, IPageView
     {
         try
         {
-            await _vm.LoadAsync();
-            if (ModMain.frmInstanceSavesLeft is not null)
-                ModMain.frmInstanceSavesLeft.ViewModel.ShowDatapackTab = _vm.ShowDatapackTab;
-            PanList.Children.Clear();
-            PanList.RowDefinitions.Clear();
+            await _vm.LoadAsync().ConfigureAwait(true);
+            if (Launcher.frmInstanceSavesLeft is not null)
+                Launcher.frmInstanceSavesLeft.ViewModel.ShowDatapackTab = _vm.ShowDatapackTab;
             PanSettingsList.Children.Clear();
             PanSettingsList.RowDefinitions.Clear();
-            BuildInfoTable();
             BuildSettings();
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, Lang.Text("Instance.Saves.Info.Error.LoadFailed"), ModBase.LogLevel.Msgbox,
+            Common.Log(ex, Lang.Text("Instance.Saves.Info.Error.LoadFailed"), Common.LogLevel.Msgbox,
                 userSummary: Lang.Text("Instance.Saves.Info.Error.LoadFailed"));
         }
     }
 
-    private void BuildInfoTable()
+    private void SeedButton_Click(object sender, EventArgs e)
     {
-        foreach (var row in _vm.Rows)
-            AddInfoRow(row);
+        if (sender is not FrameworkElement { Tag: SaveInfoRow row })
+            return;
+        CopySeed(row.Content);
     }
 
-    private void AddInfoRow(SaveInfoRow row)
+    private void ChunkbaseButton_Click(object sender, EventArgs e)
     {
-        var headBlock = new TextBlock { Text = row.Head, Margin = new Thickness(0d, 3d, 0d, 3d) };
-        var contentStack = new StackPanel { Orientation = Orientation.Horizontal };
-
-        if (row.IsSeed && row.Content != Lang.Text("Instance.Saves.Info.GetFailed"))
-        {
-            var seedBtn = new MyTextButton { Text = row.Content, Margin = new Thickness(0d, 3d, 0d, 3d) };
-            var content = row.Content;
-            var versionName = row.VersionName;
-            seedBtn.Click += (_, _) => CopySeed(content);
-            contentStack.Children.Add(seedBtn);
-
-            var chunkbaseBtn = new MyIconButton
-            {
-                SvgIcon = "lucide/external-link",
-                Width = 22d,
-                Height = 22d,
-                ToolTip = Lang.Text("Instance.Saves.Info.Chunkbase.ToolTip")
-            };
-            chunkbaseBtn.Click += (_, _) => PageInstanceSavesInfoViewModel.OpenChunkbase(content, versionName);
-            contentStack.Children.Add(chunkbaseBtn);
-        }
-        else
-        {
-            contentStack.Children.Add(new TextBlock { Text = row.Content, Margin = new Thickness(0d, 3d, 0d, 3d) });
-        }
-
-        PanList.Children.Add(headBlock);
-        PanList.Children.Add(contentStack);
-        var rowDef = new RowDefinition();
-        PanList.RowDefinitions.Add(rowDef);
-        var rowIndex = PanList.RowDefinitions.IndexOf(rowDef);
-        Grid.SetRow(headBlock, rowIndex);
-        Grid.SetColumn(headBlock, 0);
-        Grid.SetRow(contentStack, rowIndex);
-        Grid.SetColumn(contentStack, 2);
+        if (sender is not FrameworkElement { Tag: SaveInfoRow row })
+            return;
+        PageInstanceSavesInfoViewModel.OpenChunkbase(row.Content, row.VersionName);
     }
 
     private static void CopySeed(string content)
     {
         try
         {
-            ModBase.ClipboardSet(content);
+            Common.ClipboardSet(content);
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, Lang.Text("Instance.Saves.Info.Error.ClipboardFailed"), ModBase.LogLevel.Hint,
+            Common.Log(ex, Lang.Text("Instance.Saves.Info.Error.ClipboardFailed"), Common.LogLevel.Hint,
                 userSummary: Lang.Text("Instance.Saves.Info.Error.ClipboardFailed"));
         }
     }
@@ -163,11 +129,11 @@ public partial class PageInstanceSavesInfo : IRefreshable, IPageView
             {
                 if (combo.SelectedValue is null)
                     return;
-                await _vm.ApplyAllowCommandsAsync(folder, (int)combo.SelectedValue);
+                await _vm.ApplyAllowCommandsAsync(folder, (int)combo.SelectedValue).ConfigureAwait(true);
             }
             catch (Exception ex)
             {
-                ModBase.Log(ex, Lang.Text("Instance.Saves.Info.Modify.CheatFailed"), ModBase.LogLevel.Hint,
+                Common.Log(ex, Lang.Text("Instance.Saves.Info.Modify.CheatFailed"), Common.LogLevel.Hint,
                     userSummary: Lang.Text("Instance.Saves.Info.Modify.CheatFailed"));
             }
         };
@@ -214,11 +180,11 @@ public partial class PageInstanceSavesInfo : IRefreshable, IPageView
                 if (combo.SelectedValue is null)
                     return;
                 await _vm.ApplyDifficultyAsync(folder, (int)combo.SelectedValue, isHardcore,
-                    lockCheckBox.Checked == true);
+                    lockCheckBox.Checked == true).ConfigureAwait(true);
             }
             catch (Exception ex)
             {
-                ModBase.Log(ex, Lang.Text("Instance.Saves.Info.Modify.DifficultyFailed"), ModBase.LogLevel.Hint,
+                Common.Log(ex, Lang.Text("Instance.Saves.Info.Modify.DifficultyFailed"), Common.LogLevel.Hint,
                     userSummary: Lang.Text("Instance.Saves.Info.Modify.DifficultyFailed"));
             }
         }

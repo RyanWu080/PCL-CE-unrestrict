@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PCL.Core.App.Localization;
 using PCL.Core.ViewModel;
 
@@ -33,7 +34,21 @@ public partial class PageCompViewModel : ViewModelBase
 
     [ObservableProperty] private bool _supportModrinth = true;
 
-    public void ApplyPagerState(int currentPage, ModComp.CompProjectStorage storage)
+    [ObservableProperty] private bool _isLoaderLabelVisible = true;
+
+    [ObservableProperty] private bool _isLoaderComboVisible = true;
+
+    [ObservableProperty] private bool _isShaderLoaderComboVisible;
+
+    [ObservableProperty] private string _loadingText = Lang.Text("Application.Control.Loading.Default");
+
+    [RelayCommand]
+    public void InstallModPack()
+    {
+        Modpack.ModpackInstall();
+    }
+
+    public void ApplyPagerState(int currentPage, Comp.CompProjectStorage storage)
     {
         PageText = Lang.Number(currentPage + 1, "N0");
         IsPagerVisible = storage.results.Count > PageComp.pageSize ||
@@ -50,7 +65,7 @@ public partial class PageCompViewModel : ViewModelBase
         RightOpacity = CanGoRight ? 1d : 0.2d;
     }
 
-    public void ApplyErrorState(ModComp.CompProjectStorage storage)
+    public void ApplyErrorState(Comp.CompProjectStorage storage)
     {
         IsErrorVisible = storage.errorMessage is not null;
         ErrorMessage = storage.errorMessage ?? string.Empty;

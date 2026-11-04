@@ -1,6 +1,7 @@
+using PCL.Core.App.Localization;
+using PCL.Core.UI.Dialogs;
 using System.Windows;
 using System.Windows.Controls;
-using PCL.Core.App.Localization;
 
 namespace PCL;
 
@@ -42,7 +43,7 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
 
     public void Refresh()
     {
-        Refresh(ModMain.frmMain.PageCurrentSub);
+        Refresh(Launcher.frmMain.PageCurrentSub);
     }
 
     public void RefreshModDisabled()
@@ -50,77 +51,72 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
         _vm.RefreshModDisabled(McInstance);
     }
 
-    private void RefreshButton_Click(object sender, EventArgs e)
-    {
-        Refresh((FormMain.PageSubType)ModBase.Val(((MyIconButton)sender).Tag));
-    }
-
     public void Refresh(FormMain.PageSubType subType)
     {
         switch (subType)
         {
             case FormMain.PageSubType.VersionMod:
-            {
-                PageInstanceCompResource.Refresh(ModComp.CompType.Mod);
-                break;
-            }
+                {
+                    PageInstanceCompResource.Refresh(Comp.CompType.Mod);
+                    break;
+                }
             case FormMain.PageSubType.VersionScreenshot:
-            {
-                _ = PageInstanceScreenshot.RefreshAsync();
-                break;
-            }
+                {
+                    _ = PageInstanceScreenshot.RefreshAsync();
+                    break;
+                }
             case FormMain.PageSubType.VersionWorld:
-            {
-                PageInstanceSaves.Refresh();
-                break;
-            }
+                {
+                    PageInstanceSaves.Refresh();
+                    break;
+                }
             case FormMain.PageSubType.VersionResourcePack:
-            {
-                PageInstanceCompResource.Refresh(ModComp.CompType.ResourcePack);
-                break;
-            }
+                {
+                    PageInstanceCompResource.Refresh(Comp.CompType.ResourcePack);
+                    break;
+                }
             case FormMain.PageSubType.VersionShader:
-            {
-                PageInstanceCompResource.Refresh(ModComp.CompType.Shader);
-                break;
-            }
+                {
+                    PageInstanceCompResource.Refresh(Comp.CompType.Shader);
+                    break;
+                }
             case FormMain.PageSubType.VersionSchematic:
-            {
-                PageInstanceCompResource.Refresh(ModComp.CompType.Schematic);
-                break;
-            }
+                {
+                    PageInstanceCompResource.Refresh(Comp.CompType.Schematic);
+                    break;
+                }
             case FormMain.PageSubType.VersionInstall:
-            {
-                ModDownload.dlClientListLoader.Start(isForceRestart: true);
-                ModDownload.dlOptiFineListLoader.Start(isForceRestart: true);
-                ModDownload.dlForgeListLoader.Start(isForceRestart: true);
-                ModDownload.dlNeoForgeListLoader.Start(isForceRestart: true);
-                ModDownload.dlCleanroomListLoader.Start(isForceRestart: true);
-                ModDownload.dlLiteLoaderListLoader.Start(isForceRestart: true);
-                ModDownload.dlFabricListLoader.Start(isForceRestart: true);
-                ModDownload.dlFabricApiLoader.Start(isForceRestart: true);
-                ModDownload.dlLegacyFabricListLoader.Start(isForceRestart: true);
-                ModDownload.dlLegacyFabricApiLoader.Start(isForceRestart: true);
-                ModDownload.dlOptiFabricLoader.Start(isForceRestart: true);
-                ModDownload.dlLabyModListLoader.Start(isForceRestart: true);
-                ItemInstall.Checked = true;
-                ModMain.frmInstanceInstall.GetCurrentInfo();
-                break;
-            }
+                {
+                    GameDownload.dlClientListLoader.Start(isForceRestart: true);
+                    GameDownload.DlOptiFineListLoader.Start(isForceRestart: true);
+                    GameDownload.DlForgeListLoader.Start(isForceRestart: true);
+                    GameDownload.DlNeoForgeListLoader.Start(isForceRestart: true);
+                    GameDownload.DlCleanroomListLoader.Start(isForceRestart: true);
+                    GameDownload.DlLiteLoaderListLoader.Start(isForceRestart: true);
+                    GameDownload.DlFabricListLoader.Start(isForceRestart: true);
+                    CompDownloadLoaders.DlFabricApiLoader.Start(isForceRestart: true);
+                    GameDownload.DlLegacyFabricListLoader.Start(isForceRestart: true);
+                    CompDownloadLoaders.DlLegacyFabricApiLoader.Start(isForceRestart: true);
+                    CompDownloadLoaders.DlOptiFabricLoader.Start(isForceRestart: true);
+                    GameDownload.DlLabyModListLoader.Start(isForceRestart: true);
+                    ItemInstall.Checked = true;
+                    Launcher.frmInstanceInstall.GetCurrentInfo();
+                    break;
+                }
             case FormMain.PageSubType.VersionExport:
-            {
-                if (ModMain.frmInstanceExport is not null)
-                    ModMain.frmInstanceExport.RefreshAll();
-                ItemExport.Checked = true;
-                break;
-            }
+                {
+                    if (Launcher.frmInstanceExport is not null)
+                        Launcher.frmInstanceExport.RefreshAll();
+                    ItemExport.Checked = true;
+                    break;
+                }
             case FormMain.PageSubType.VersionServer:
-            {
-                if (ModMain.frmInstanceServer is not null)
-                    ModMain.frmInstanceServer.RefreshServers();
-                ItemServer.Checked = true;
-                break;
-            }
+                {
+                    if (Launcher.frmInstanceServer is not null)
+                        Launcher.frmInstanceServer.RefreshServers();
+                    ItemServer.Checked = true;
+                    break;
+                }
         }
     }
 
@@ -131,21 +127,24 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
             control.IsEnabled = false;
         try
         {
-            var choice = await ModMain.MyMsgBoxAsync(
-                PageInstanceLeftViewModel.GetResetConfirmMessage(),
-                PageInstanceLeftViewModel.GetResetConfirmTitle(),
-                button2: PageInstanceLeftViewModel.GetCancelText(),
-                isWarn: true);
+            var choice = (await DialogService.Instance.ShowAsync(new TextDialogRequest
+            {
+                Title = PageInstanceLeftViewModel.GetResetConfirmTitle(),
+                Content = PageInstanceLeftViewModel.GetResetConfirmMessage(),
+                Buttons = DialogButtons.From(DialogButton.Create(Lang.Text("Common.Action.Confirm")), DialogButton.Create(PageInstanceLeftViewModel.GetCancelText())),
+                IsWarn = true,
+                ForceWait = false
+            }).ConfigureAwait(true)).Button;
             if (choice != 1)
                 return;
-            if (ModMain.frmInstanceSetup is null)
-                ModMain.frmInstanceSetup = new PageInstanceSetup();
-            ModMain.frmInstanceSetup.Reset();
+            if (Launcher.frmInstanceSetup is null)
+                Launcher.frmInstanceSetup = new PageInstanceSetup();
+            Launcher.frmInstanceSetup.Reset();
             ItemSetup.Checked = true;
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, "初始化实例设置失败", ModBase.LogLevel.Msgbox,
+            Common.Log(ex, "初始化实例设置失败", Common.LogLevel.Msgbox,
                 userSummary: Lang.Text("Instance.Error.OperationFailed"));
         }
         finally
@@ -155,10 +154,10 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
         }
     }
 
-    private void PageCheck(object sender, ModBase.RouteEventArgs e)
+    private void PageCheck(object sender, Common.RouteEventArgs e)
     {
         if (sender is MyListItem item && item.Tag is not null)
-            PageChange((FormMain.PageSubType)ModBase.Val(item.Tag));
+            PageChange((FormMain.PageSubType)Common.Val(item.Tag));
     }
 
     public object PageGet(FormMain.PageSubType id)
@@ -168,88 +167,75 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
         switch (id)
         {
             case FormMain.PageSubType.VersionOverall:
-            {
-                if (ModMain.frmInstanceOverall is null)
-                    ModMain.frmInstanceOverall = new PageInstanceOverall();
-                return ModMain.frmInstanceOverall;
-            }
+                {
+                    Launcher.frmInstanceOverall ??= new PageInstanceOverall();
+                    return Launcher.frmInstanceOverall;
+                }
             case FormMain.PageSubType.VersionMod:
-            {
-                if (ModMain.frmInstanceMod is null)
-                    ModMain.frmInstanceMod = new PageInstanceCompResource(ModComp.CompType.Mod);
-                return ModMain.frmInstanceMod;
-            }
+                {
+                    Launcher.frmInstanceMod ??= new PageInstanceCompResource(Comp.CompType.Mod);
+                    return Launcher.frmInstanceMod;
+                }
             case FormMain.PageSubType.VersionModDisabled:
-            {
-                if (ModMain.frmInstanceModDisabled is null)
-                    ModMain.frmInstanceModDisabled = new PageInstanceModDisabled();
-                return ModMain.frmInstanceModDisabled;
-            }
+                {
+                    Launcher.frmInstanceModDisabled ??= new PageInstanceModDisabled();
+                    return Launcher.frmInstanceModDisabled;
+                }
             case FormMain.PageSubType.VersionModJarInJar:
-            {
-                if (ModMain.frmInstanceModJarInJar is null)
-                    ModMain.frmInstanceModJarInJar = new PageInstanceCompJarInJar();
-                return ModMain.frmInstanceModJarInJar;
-            }
+                {
+                    Launcher.frmInstanceModJarInJar ??= new PageInstanceCompJarInJar();
+                    return Launcher.frmInstanceModJarInJar;
+                }
             case FormMain.PageSubType.VersionSetup:
-            {
-                if (ModMain.frmInstanceSetup is null)
-                    ModMain.frmInstanceSetup = new PageInstanceSetup();
-                return ModMain.frmInstanceSetup;
-            }
+                {
+                    Launcher.frmInstanceSetup ??= new PageInstanceSetup();
+                    return Launcher.frmInstanceSetup;
+                }
             case FormMain.PageSubType.VersionWorld:
-            {
-                if (ModMain.frmInstanceSaves is null)
-                    ModMain.frmInstanceSaves = new PageInstanceSaves();
-                return ModMain.frmInstanceSaves;
-            }
+                {
+                    Launcher.frmInstanceSaves ??= new PageInstanceSaves();
+                    return Launcher.frmInstanceSaves;
+                }
             case FormMain.PageSubType.VersionScreenshot:
-            {
-                if (ModMain.frmInstanceScreenshot is null)
-                    ModMain.frmInstanceScreenshot = new PageInstanceScreenshot();
-                return ModMain.frmInstanceScreenshot;
-            }
+                {
+                    Launcher.frmInstanceScreenshot ??= new PageInstanceScreenshot();
+                    return Launcher.frmInstanceScreenshot;
+                }
             case FormMain.PageSubType.VersionResourcePack:
-            {
-                if (ModMain.frmInstanceResourcePack is null)
-                    ModMain.frmInstanceResourcePack = new PageInstanceCompResource(ModComp.CompType.ResourcePack);
-                return ModMain.frmInstanceResourcePack;
-            }
+                {
+                    Launcher.frmInstanceResourcePack ??= new PageInstanceCompResource(Comp.CompType.ResourcePack);
+                    return Launcher.frmInstanceResourcePack;
+                }
             case FormMain.PageSubType.VersionShader:
-            {
-                if (ModMain.frmInstanceShader is null)
-                    ModMain.frmInstanceShader = new PageInstanceCompResource(ModComp.CompType.Shader);
-                return ModMain.frmInstanceShader;
-            }
+                {
+                    Launcher.frmInstanceShader ??= new PageInstanceCompResource(Comp.CompType.Shader);
+                    return Launcher.frmInstanceShader;
+                }
             case FormMain.PageSubType.VersionSchematic:
-            {
-                if (ModMain.frmInstanceSchematic is null)
-                    ModMain.frmInstanceSchematic = new PageInstanceCompResource(ModComp.CompType.Schematic);
-                return ModMain.frmInstanceSchematic;
-            }
+                {
+                    Launcher.frmInstanceSchematic ??= new PageInstanceCompResource(Comp.CompType.Schematic);
+                    return Launcher.frmInstanceSchematic;
+                }
             case FormMain.PageSubType.VersionInstall:
-            {
-                if (ModMain.frmInstanceInstall is null)
-                    ModMain.frmInstanceInstall = new PageInstanceInstall();
-                return ModMain.frmInstanceInstall;
-            }
+                {
+                    Launcher.frmInstanceInstall ??= new PageInstanceInstall();
+                    return Launcher.frmInstanceInstall;
+                }
             case FormMain.PageSubType.VersionExport:
-            {
-                if (ModMain.frmInstanceExport is null)
-                    ModMain.frmInstanceExport = new PageInstanceExport();
-                return ModMain.frmInstanceExport;
-            }
+                {
+                    Launcher.frmInstanceExport ??= new PageInstanceExport();
+                    return Launcher.frmInstanceExport;
+                }
             case FormMain.PageSubType.VersionServer:
-            {
-                if (ModMain.frmInstanceServer is null)
-                    ModMain.frmInstanceServer = new PageInstanceServer();
-                return ModMain.frmInstanceServer;
-            }
+                {
+                    Launcher.frmInstanceServer ??= new PageInstanceServer();
+                    return Launcher.frmInstanceServer;
+                }
 
             default:
-            {
-                throw new Exception(PageInstanceLeftViewModel.GetUnknownSubPageMessage(id));
-            }
+                {
+                    throw new Exception(PageInstanceLeftViewModel.GetUnknownSubPageMessage(id));
+                }
         }
     }
 
@@ -257,7 +243,7 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
     {
         if (pageID == id)
             return;
-        ModAnimation.AniBeginControl();
+        Animations.AniBeginControl();
         try
         {
             PageChangeRun((MyPageRight)PageGet(id));
@@ -265,37 +251,37 @@ public partial class PageInstanceLeft : IRefreshable, IPageView
         }
         catch (Exception ex)
         {
-            ModBase.Log(
+            Common.Log(
                 ex,
                 PageInstanceLeftViewModel.GetSwitchFailedMessage(id),
-                ModBase.LogLevel.Feedback,
+                Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Instance.Error.OperationFailed"));
         }
         finally
         {
-            ModAnimation.AniEndControl();
+            Animations.AniEndControl();
         }
     }
 
     private static void PageChangeRun(MyPageRight target)
     {
-        ModAnimation.AniStop("FrmMain PageChangeRight");
+        Animations.AniStop("FrmMain PageChangeRight");
         if (target.Parent is not null)
             target.SetValue(ContentPresenter.ContentProperty, null);
-        ModMain.frmMain.pageRight = target;
-        ((MyPageRight)ModMain.frmMain.PanMainRight.Child).PageOnExit();
-        ModAnimation.AniStart(new[]
+        Launcher.frmMain.pageRight = target;
+        ((MyPageRight)Launcher.frmMain.PanMainRight.Child).PageOnExit();
+        Animations.AniStart(new[]
         {
-            ModAnimation.AaCode(() =>
+            Animations.AaCode(() =>
             {
-                ((MyPageRight)ModMain.frmMain.PanMainRight.Child).PageOnForceExit();
-                ModMain.frmMain.PanMainRight.Child = ModMain.frmMain.pageRight;
-                ModMain.frmMain.pageRight.Opacity = 0d;
+                ((MyPageRight)Launcher.frmMain.PanMainRight.Child).PageOnForceExit();
+                Launcher.frmMain.PanMainRight.Child = Launcher.frmMain.pageRight;
+                Launcher.frmMain.pageRight.Opacity = 0d;
             }, 130),
-            ModAnimation.AaCode(() =>
+            Animations.AaCode(() =>
             {
-                ModMain.frmMain.pageRight.Opacity = 1d;
-                ModMain.frmMain.pageRight.PageOnEnter();
+                Launcher.frmMain.pageRight.Opacity = 1d;
+                Launcher.frmMain.pageRight.PageOnEnter();
             }, 30, true)
         }, "PageLeft PageChange");
     }

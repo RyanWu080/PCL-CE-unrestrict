@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Hints;
+using PCL.Core.UI.Dialogs;
 using PCL.Core.IO.Net.Http;
 using PCL.Core.Utils;
 using PCL.Core.ViewModel;
@@ -48,7 +50,7 @@ public partial class PageSetupAboutViewModel : ViewModelBase
     public void RotateCommunityLogo(object? sender)
     {
         if (sender is null) return;
-        ModAnimation.AniStart(new[] { ModAnimation.AaRotateTransform(sender, 360d) });
+        Animations.AniStart(new[] { Animations.AaRotateTransform(sender, 360d) });
     }
 
     [RelayCommand]
@@ -63,63 +65,79 @@ public partial class PageSetupAboutViewModel : ViewModelBase
                 switch (_clickCount)
                 {
                     case 5:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.NiceClick"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.NiceClick")));
                         break;
                     case 15:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.StillClicking"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.StillClicking")));
                         break;
                     case 25:
-                        if (await ModMain.MyMsgBoxAsync(Lang.Text("Setup.About.EasterEgg.Bored.Message"),
-                                Lang.Text("Setup.About.EasterEgg.Bored.Title"),
-                                Lang.Text("Setup.About.EasterEgg.Bored.Yes"),
-                                Lang.Text("Setup.About.EasterEgg.Bored.No")) == 2)
-                            HintService.Hint(Lang.Text("Setup.About.EasterEgg.Bored.Response"));
+                        var boredResult = await Dialog.ShowAsync(new TextDialogRequest
+                        {
+                            Title = Lang.Text("Setup.About.EasterEgg.Bored.Title"),
+                            Content = Lang.Text("Setup.About.EasterEgg.Bored.Message"),
+                            Buttons = DialogButtons.From(
+                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Bored.Yes")),
+                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Bored.No")))
+                        });
+                        if (boredResult.Button == 2)
+                            HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Bored.Response")));
                         break;
                     case 50:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.Encouragement"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Encouragement")));
                         break;
                     case 75:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.HiddenTheme"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.HiddenTheme")));
                         break;
                     case 100:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.StillStaring"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.StillStaring")));
                         break;
                     case 130:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.NothingBehind"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.NothingBehind")));
                         break;
                     case 150:
-                        switch (await ModMain.MyMsgBoxAsync(Lang.Text("Setup.About.EasterEgg.Tired.Message1"),
-                                    Lang.Text("Setup.About.EasterEgg.Tired.Title1"),
-                                    Lang.Text("Setup.About.EasterEgg.Tired.Exhausted"),
-                                    Lang.Text("Setup.About.EasterEgg.Tired.NotTired")))
+                        var tiredResult1 = await Dialog.ShowAsync(new TextDialogRequest
+                        {
+                            Title = Lang.Text("Setup.About.EasterEgg.Tired.Title1"),
+                            Content = Lang.Text("Setup.About.EasterEgg.Tired.Message1"),
+                            Buttons = DialogButtons.From(
+                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.Exhausted")),
+                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.NotTired")))
+                        });
+                        switch (tiredResult1.Button)
                         {
                             case 1:
-                                HintService.Hint(Lang.Text("Setup.About.EasterEgg.Tired.StopClicking"));
+                                HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Tired.StopClicking")));
                                 break;
                             case 2:
-                                switch (await ModMain.MyMsgBoxAsync(
-                                            Lang.Text("Setup.About.EasterEgg.Tired.Message2"),
-                                            Lang.Text("Setup.About.EasterEgg.Tired.Title2"),
-                                            Lang.Text("Setup.About.EasterEgg.Tired.Exhausted"),
-                                            Lang.Text("Setup.About.EasterEgg.Tired.NotTired")))
+                                var tiredResult2 = await Dialog.ShowAsync(new TextDialogRequest
+                                {
+                                    Title = Lang.Text("Setup.About.EasterEgg.Tired.Title2"),
+                                    Content = Lang.Text("Setup.About.EasterEgg.Tired.Message2"),
+                                    Buttons = DialogButtons.From(
+                                        DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.Exhausted")),
+                                        DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.NotTired")))
+                                });
+                                switch (tiredResult2.Button)
                                 {
                                     case 1:
-                                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.Tired.StopClicking"));
+                                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Tired.StopClicking")));
                                         break;
                                     case 2:
-                                        switch (await ModMain.MyMsgBoxAsync(
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.Message3"),
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.Title3"),
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.Exhausted"),
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.ReallyNotTired")))
+                                        var tiredResult3 = await Dialog.ShowAsync(new TextDialogRequest
+                                        {
+                                            Title = Lang.Text("Setup.About.EasterEgg.Tired.Title3"),
+                                            Content = Lang.Text("Setup.About.EasterEgg.Tired.Message3"),
+                                            Buttons = DialogButtons.From(
+                                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.Exhausted")),
+                                                DialogButton.Create(Lang.Text("Setup.About.EasterEgg.Tired.ReallyNotTired")))
+                                        });
+                                        switch (tiredResult3.Button)
                                         {
                                             case 1:
-                                                HintService.Hint(
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.StopClicking"));
+                                                HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Tired.StopClicking")));
                                                 break;
                                             case 2:
-                                                HintService.Hint(
-                                                    Lang.Text("Setup.About.EasterEgg.Tired.FinallyGiveUp"));
+                                                HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.Tired.FinallyGiveUp")));
                                                 break;
                                         }
 
@@ -131,7 +149,7 @@ public partial class PageSetupAboutViewModel : ViewModelBase
 
                         break;
                     case 200:
-                        HintService.Hint(Lang.Text("Setup.About.EasterEgg.ClickDisabled"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.About.EasterEgg.ClickDisabled")));
                         IsLogoClickEnabled = false;
                         return;
                 }
@@ -143,26 +161,26 @@ public partial class PageSetupAboutViewModel : ViewModelBase
                 var my = rand.Next(-1, 1);
                 if (my == 0)
                     my = 1;
-                ModAnimation.AniStart(new[]
+                Animations.AniStart(new[]
                 {
-                    ModAnimation.AaTranslateX(sender, mx, 0), ModAnimation.AaTranslateY(sender, my, 0),
-                    ModAnimation.AaTranslateX(sender, -mx, 0, 100), ModAnimation.AaTranslateY(sender, -my, 0, 100)
+                    Animations.AaTranslateX(sender, mx, 0), Animations.AaTranslateY(sender, my, 0),
+                    Animations.AaTranslateX(sender, -mx, 0, 100), Animations.AaTranslateY(sender, -my, 0, 100)
                 });
             }
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, "处理彩蛋点击时失败", ModBase.LogLevel.Feedback,
+            Common.Log(ex, "处理彩蛋点击时失败", Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Setup.Error.OperationFailed"));
         }
     }
 
     private static string FormatVersionInfo()
     {
-        return Lang.Text("Setup.About.Version.Info").Replace("%VERSION%", ModBase.versionBaseName)
-            .Replace("%VERSIONCODE%", ModBase.versionCode.ToString())
-            .Replace("%BRANCH%", ModBase.versionBranchName)
-            .Replace("%COMMIT_HASH%", ModBase.commitHashShort);
+        return Lang.Text("Setup.About.Version.Info").Replace("%VERSION%", Common.VersionBaseName)
+            .Replace("%VERSIONCODE%", Common.VersionCode.ToString())
+            .Replace("%BRANCH%", Common.VersionBranchName)
+            .Replace("%COMMIT_HASH%", Common.CommitHashShort);
     }
 
     private static async Task<List<PageSetupAbout.GitHubContributor>> FetchContributorsAsync()

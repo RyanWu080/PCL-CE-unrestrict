@@ -4,6 +4,8 @@ using System.Windows.Input;
 using PCL.Core.App;
 using PCL.Core.Utils;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Hints;
+using PCL.Core.UI.Dialogs;
 using PCL.Core.Utils.OS;
 
 namespace PCL;
@@ -19,6 +21,7 @@ public partial class PageSetupUpdate : IPageView
     {
         InitializeComponent();
         DataContext = _vm;
+        DialogServiceInstaller.Install(_vm);
         Loaded += (_, _) => Refresh();
         Unloaded += PageSetupUpdate_Unloaded;
     }
@@ -43,14 +46,14 @@ public partial class PageSetupUpdate : IPageView
 
     private void Init()
     {
-        ModAnimation.AniBeginControl();
+        Animations.AniBeginControl();
         TextMirrorCDK.Password = Config.Update.MirrorChyanKey;
 
         ComboSystemUpdateChannel.SelectedIndex = (int)Config.Update.UpdateChannel;
         ComboSystemUpdateMode.SelectedIndex = (int)Config.Update.UpdateMode;
 
         _vm.Reload();
-        ModAnimation.AniEndControl();
+        Animations.AniEndControl();
         CheckUpdate();
     }
 
@@ -59,26 +62,26 @@ public partial class PageSetupUpdate : IPageView
         try
         {
             // 修复：使用 dynamic 绕过命名空间重名导致的编译期类型冲突，
-            // 或者你可以尝试替换为 PCL.Core.App.SemVer.Parse(ModBase.versionBaseName)
+            // 或者你可以尝试替换为 PCL.Core.App.SemVer.Parse(Common.VersionBaseName)
             if (await UpdateManager.remoteServer.IsLatestAsync(
-                    UpdateManager.IsCurrentVersionBeta ? UpdateChannel.beta : UpdateChannel.stable,
-                    SystemInfo.IsArm64System ? UpdateArch.arm64 : UpdateArch.x64,
-                    SemVer.Parse(ModBase.versionBaseName),
-                    ModBase.versionCode))
+                    UpdateManager.IsCurrentVersionBeta ? UpdateChannel.Beta : UpdateChannel.Stable,
+                    SystemInfo.IsArm64System ? UpdateArch.Arm64 : UpdateArch.X64,
+                    SemVer.Parse(Common.VersionBaseName),
+                    Common.VersionCode))
             {
-                ModBase.Log("[Update] 已是最新版本");
+                Common.Log("[Update] 已是最新版本");
                 return UpdateStatus.Latest;
             }
 
-            ModBase.Log("[Update] 有可用的新版本");
+            Common.Log("[Update] 有可用的新版本");
             return UpdateStatus.Available;
         }
         catch (Exception ex)
         {
-            ModBase.Log(
+            Common.Log(
                 ex,
                 Lang.Text("Setup.Update.Error.NetworkFailed"),
-                ModBase.LogLevel.Hint,
+                Common.LogLevel.Hint,
                 userSummary: Lang.Text("Setup.Update.Error.NetworkFailed"));
             return UpdateStatus.Error;
         }
@@ -86,7 +89,7 @@ public partial class PageSetupUpdate : IPageView
 
     public async void CheckUpdate()
     {
-        ModBase.Log("[Update] 开始检查更新");
+        Common.Log("[Update] 开始检查更新");
         _vm.ShowUpdateCard = false;
         _vm.ShowCheckCard = true;
         _vm.CurrentDescText = Lang.Text("Setup.Update.Checking");
@@ -100,14 +103,14 @@ public partial class PageSetupUpdate : IPageView
                 {
                     updateInfo = UpdateManager.remoteServer.GetLatestVersion(
                         UpdateManager.IsCurrentVersionBeta
-                            ? UpdateChannel.beta
-                            : UpdateChannel.stable, SystemInfo.IsArm64System ? UpdateArch.arm64 : UpdateArch.x64);
+                            ? UpdateChannel.Beta
+                            : UpdateChannel.Stable, SystemInfo.IsArm64System ? UpdateArch.Arm64 : UpdateArch.X64);
                     _vm.UpdateNameText = "PCL CE " + VersionNameFormat(updateInfo.VersionName);
                     var summary = updateInfo.Changelog.Between("<summary>", "</summary>");
                     if (!updateInfo.Changelog.Contains("<summary>") || string.IsNullOrWhiteSpace(summary.Trim()))
-                        TextChangelog.Text = Lang.Text("Setup.Update.Changelog.Empty");
+                        _vm.ChangelogText = Lang.Text("Setup.Update.Changelog.Empty");
                     else
-                        TextChangelog.Text = summary;
+                        _vm.ChangelogText = summary;
                 }
                 catch (Exception ex)
                 {
@@ -119,20 +122,20 @@ public partial class PageSetupUpdate : IPageView
                 {
                     _vm.CurrentDescText = Lang.Text("Setup.Update.CheckFailed");
                     if (checkUpdateEx is not null)
-                        ModBase.Log(
+                        Common.Log(
                             checkUpdateEx,
                             "[Update] 检查更新失败",
-                            ModBase.LogLevel.Msgbox,
+                            Common.LogLevel.Msgbox,
                             userSummary: Lang.Text("Update.Check.Failed"));
                     else
-                        ModBase.Log(
+                        Common.Log(
                             "[Update] 检查更新失败",
-                            ModBase.LogLevel.Msgbox,
+                            Common.LogLevel.Msgbox,
                             userSummary: Lang.Text("Update.Check.Failed"));
                     return;
                 }
 
-                if (UpdateManager.updateLoader is not null && UpdateManager.updateLoader.State == ModBase.LoadState.Loading)
+                if (UpdateManager.updateLoader is not null && UpdateManager.updateLoader.State == LoadState.Loading)
                 {
                     BtnUpdate_Timer();
                     BtnUpdate.IsEnabled = false;
@@ -173,9 +176,9 @@ public partial class PageSetupUpdate : IPageView
 
     public void BtnUpdate_Timer()
     {
-        while (UpdateManager.updateLoader is not null && UpdateManager.updateLoader.State == ModBase.LoadState.Loading)
+        while (UpdateManager.updateLoader is not null && UpdateManager.updateLoader.State == LoadState.Loading)
         {
-            ModBase.RunInUi(() => BtnUpdate.Text = Lang.Number(UpdateManager.updateLoader.Progress, "P2"));
+            Common.RunInUi(() => BtnUpdate.Text = Lang.Number(UpdateManager.updateLoader.Progress, "P2"));
             Thread.Sleep(200);
         }
     }
@@ -189,39 +192,48 @@ public partial class PageSetupUpdate : IPageView
 
     private async void BtnChangelogDetail_Click(object sender, EventArgs e)
     {
-        var ctl = sender as Control;
-        if (ctl is not null) ctl.IsEnabled = false;
+        _vm.ChangelogDetailEnabled = false;
         try
         {
             if (updateInfo is null)
-                await ModMain.MyMsgBoxAsync(Lang.Text("Setup.Update.Changelog.Unavailable"), Lang.Text("Setup.Update.Changelog.Title"));
+                await _vm.Dialog.ShowAsync(new TextDialogRequest
+                {
+                    Title = Lang.Text("Setup.Update.Changelog.Title"),
+                    Content = Lang.Text("Setup.Update.Changelog.Unavailable"),
+                    Buttons = DialogButtons.Ok
+                });
             else
-                ModMain.MyMsgBoxMarkdown(updateInfo.Changelog, Lang.Text("Setup.Update.Changelog.Title"));
+                _vm.Dialog.Show(new MarkdownDialogRequest
+                {
+                    Title = Lang.Text("Setup.Update.Changelog.Title"),
+                    Content = updateInfo.Changelog ?? "",
+                    Buttons = DialogButtons.Ok,
+                    ForceWait = true
+                });
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, "查看更新日志失败", ModBase.LogLevel.Feedback,
+            Common.Log(ex, "查看更新日志失败", Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Setup.Error.OperationFailed"));
         }
         finally
         {
-            if (ctl is not null) ctl.IsEnabled = true;
+            _vm.ChangelogDetailEnabled = true;
         }
     }
 
     private void ComboSystemUpdateMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (!ModAnimation.AniExitsAnyControl())
+        if (!Animations.AniExitsAnyControl())
             Config.Update.UpdateMode = (LauncherAutoUpdateBehavior)ComboSystemUpdateMode.SelectedIndex;
     }
 
     private async void ComboSystemUpdateBranch_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var ctl = sender as Control;
-        if (ctl is not null) ctl.IsEnabled = false;
+        _vm.ChannelEnabled = false;
         try
         {
-            if (ModAnimation.AniExitsAnyControl())
+            if (Animations.AniExitsAnyControl())
                 return;
 
             var isCancelled = false;
@@ -233,10 +245,15 @@ public partial class PageSetupUpdate : IPageView
                 }
                 case 1:
                 {
-                    if (await ModMain.MyMsgBoxAsync(Lang.Text("Setup.Update.Channel.Beta.Warning.Message"),
-                            Lang.Text("Setup.Update.Channel.Common.Warning.Title"),
-                            Lang.Text("Setup.Update.Channel.Common.Warning.Confirm"),
-                            Lang.Text("Common.Action.Cancel"), isWarn: true) == 2)
+                    if ((await _vm.Dialog.ShowAsync(new TextDialogRequest
+                    {
+                        Title = Lang.Text("Setup.Update.Channel.Common.Warning.Title"),
+                        Content = Lang.Text("Setup.Update.Channel.Beta.Warning.Message"),
+                        Buttons = DialogButtons.From(
+                            DialogButton.Create(Lang.Text("Setup.Update.Channel.Common.Warning.Confirm")),
+                            DialogButton.Create(Lang.Text("Common.Action.Cancel"))),
+                        IsWarn = true
+                    })).Button == 2)
                         isCancelled = true;
                     else
                         CheckUpdate();
@@ -244,21 +261,32 @@ public partial class PageSetupUpdate : IPageView
                 }
                 case 2:
                 {
-                    if (await ModMain.MyMsgBoxAsync(Lang.Text("Setup.Update.Channel.Dev.Warning.Message"),
-                            Lang.Text("Setup.Update.Channel.Common.Warning.Title"),
-                            Lang.Text("Setup.Update.Channel.Common.Warning.Confirm"),
-                            Lang.Text("Common.Action.Cancel"), isWarn: true) == 2)
+                    if ((await _vm.Dialog.ShowAsync(new TextDialogRequest
+                    {
+                        Title = Lang.Text("Setup.Update.Channel.Common.Warning.Title"),
+                        Content = Lang.Text("Setup.Update.Channel.Dev.Warning.Message"),
+                        Buttons = DialogButtons.From(
+                            DialogButton.Create(Lang.Text("Setup.Update.Channel.Common.Warning.Confirm")),
+                            DialogButton.Create(Lang.Text("Common.Action.Cancel"))),
+                        IsWarn = true
+                    })).Button == 2)
                     {
                         isCancelled = true;
                         break;
                     }
 
                     var confirmText = Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.ExpectedInput");
-                    var ret = await ModMain.MyMsgBoxInputAsync(
-                        Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Title"),
-                        Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Message", confirmText),
-                        button1: Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Submit"),
-                        button2: Lang.Text("Common.Action.Cancel"), isWarn: true);
+                    var retDialog = await _vm.Dialog.ShowAsync(new InputDialogRequest
+                    {
+                        Title = Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Title"),
+                        Content = Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Message", confirmText),
+                        Buttons = DialogButtons.From(
+                            DialogButton.Create(Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.Submit")),
+                            DialogButton.Create(Lang.Text("Common.Action.Cancel"))),
+                        IsWarn = true,
+                        HighLight = false
+                    });
+                    var ret = retDialog.IsConfirmed ? retDialog.InputText : null;
 
                     if (ret == confirmText)
                     {
@@ -266,7 +294,7 @@ public partial class PageSetupUpdate : IPageView
                     }
                     else
                     {
-                        HintService.Hint(Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.WrongInput"));
+                        HintService.Show(Hints.Info(Lang.Text("Setup.Update.Channel.Dev.FinalConfirm.WrongInput")));
                         isCancelled = true;
                     }
                     break;
@@ -275,9 +303,9 @@ public partial class PageSetupUpdate : IPageView
 
             if (isCancelled)
             {
-                ModAnimation.AniBeginControl();
+                Animations.AniBeginControl();
                 ComboSystemUpdateChannel.SelectedItem = e.RemovedItems[0];
-                ModAnimation.AniEndControl();
+                Animations.AniEndControl();
             }
             else
             {
@@ -286,12 +314,12 @@ public partial class PageSetupUpdate : IPageView
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, "切换更新通道失败", ModBase.LogLevel.Feedback,
+            Common.Log(ex, "切换更新通道失败", Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Setup.Error.OperationFailed"));
         }
         finally
         {
-            if (ctl is not null) ctl.IsEnabled = true;
+            _vm.ChannelEnabled = true;
         }
     }
 
@@ -302,12 +330,12 @@ public partial class PageSetupUpdate : IPageView
 
     private void BtnGetMirrorCDK_Click(object sender, MouseButtonEventArgs e)
     {
-        ModBase.OpenWebsite("https://mirrorchyan.com/");
+        Common.OpenWebsite("https://mirrorchyan.com/");
     }
 
     private void BtnChangelog_Click(object sender, MouseButtonEventArgs e)
     {
-        ModBase.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases/v" + ModBase.versionBaseName);
+        Common.OpenWebsite("https://github.com/PCL-Community/PCL2-CE/releases/v" + Common.VersionBaseName);
     }
 
     public string VersionNameFormat(string str) => PageSetupUpdateViewModel.VersionNameFormat(str);

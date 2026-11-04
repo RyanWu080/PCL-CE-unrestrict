@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PCL.Core.App;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Dialogs;
 using PCL.Core.Minecraft.Profile;
 using PCL.Core.ViewModel;
 
@@ -23,7 +24,7 @@ public partial class PageLoginProfileViewModel : ViewModelBase
     [RelayCommand]
     public async Task ReloadAsync()
     {
-        ModBase.Log("[Profile] 刷新档案列表");
+        Common.Log("[Profile] 刷新档案列表");
         var profiles = await RunAsync(ct => Task.Run(() =>
         {
             ProfileService.Load();
@@ -35,11 +36,11 @@ public partial class PageLoginProfileViewModel : ViewModelBase
             Profiles.Clear();
             foreach (var profile in profiles)
                 Profiles.Add(new PageLoginProfile.ProfileItem(profile));
-            ModBase.Log("[Profile] 档案列表刷新完成");
+            Common.Log("[Profile] 档案列表刷新完成");
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, Lang.Text("Launch.Account.Profile.Error.Read"), ModBase.LogLevel.Feedback,
+            Common.Log(ex, Lang.Text("Launch.Account.Profile.Error.Read"), Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Launch.Account.Profile.Error.Read"));
         }
 
@@ -59,10 +60,14 @@ public partial class PageLoginProfileViewModel : ViewModelBase
     [RelayCommand]
     public async Task DeleteProfileAsync(PageLoginProfile.ProfileItem item)
     {
-        var result = await ModMain.MyMsgBoxAsync(Lang.Text("Launch.Account.Profile.DeleteConfirm.Message"),
-            Lang.Text("Launch.Account.Profile.DeleteConfirm.Title"), Lang.Text("Common.Action.Continue"),
-            Lang.Text("Common.Action.Cancel"), isWarn: true);
-        if (result == 2) return;
+        var result = await Dialog.ShowAsync(new TextDialogRequest
+        {
+            Title = Lang.Text("Launch.Account.Profile.DeleteConfirm.Title"),
+            Content = Lang.Text("Launch.Account.Profile.DeleteConfirm.Message"),
+            Buttons = DialogButtons.ContinueCancel,
+            IsWarn = true
+        });
+        if (result.Button == 2) return;
         ProfileUi.RemoveProfile(item.Profile);
         await ReloadAsync();
     }
@@ -70,8 +75,15 @@ public partial class PageLoginProfileViewModel : ViewModelBase
     [RelayCommand]
     public async Task EditServerNameAsync(PageLoginProfile.ProfileItem item)
     {
-        var name = await ModMain.MyMsgBoxInputAsync(Lang.Text("Launch.Account.Profile.EditServerName.Title"),
-            Lang.Text("Launch.Account.Profile.EditServerName.Message"), item.Profile.ServerName ?? "");
+        var nameResult = await Dialog.ShowAsync(new InputDialogRequest
+        {
+            Title = Lang.Text("Launch.Account.Profile.EditServerName.Title"),
+            Content = Lang.Text("Launch.Account.Profile.EditServerName.Message"),
+            DefaultValue = item.Profile.ServerName ?? "",
+            Buttons = DialogButtons.OkCancel,
+            HighLight = false
+        });
+        var name = nameResult.IsConfirmed ? nameResult.InputText : null;
         if (name is not null) ProfileUi.EditAuthServerName(item.Profile, name);
     }
 
@@ -79,14 +91,14 @@ public partial class PageLoginProfileViewModel : ViewModelBase
     public void EditUuid(PageLoginProfile.ProfileItem item) => ProfileUi.EditOfflineUuid(item.Profile);
 
     [RelayCommand]
-    public void CopyUuid(PageLoginProfile.ProfileItem item) => ModBase.ClipboardSet(item.Profile.Uuid);
+    public void CopyUuid(PageLoginProfile.ProfileItem item) => Common.ClipboardSet(item.Profile.Uuid);
 
     public void Select(PageLoginProfile.ProfileItem item)
     {
         ProfileService.Select(item.Profile);
-        ModBase.Log($"[Profile] 选定档案: {item.Profile.UserName}, 以 {item.Profile.ProfileType} 方式验证");
-        ModLaunch.mcLoginMsLoader.State = ModBase.LoadState.Waiting;
-        ModLaunch.mcLoginAuthLoader.State = ModBase.LoadState.Waiting;
-        ModLaunch.mcLoginLegacyLoader.State = ModBase.LoadState.Waiting;
+        Common.Log($"[Profile] 选定档案: {item.Profile.UserName}, 以 {item.Profile.ProfileType} 方式验证");
+        GameLaunch.mcLoginMsLoader.State = LoadState.Waiting;
+        GameLaunch.mcLoginAuthLoader.State = LoadState.Waiting;
+        GameLaunch.mcLoginLegacyLoader.State = LoadState.Waiting;
     }
 }

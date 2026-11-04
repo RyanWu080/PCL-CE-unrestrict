@@ -1,3 +1,6 @@
+using System.Collections.ObjectModel;
+using System.Windows;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PCL.Core.ViewModel;
 
@@ -107,4 +110,47 @@ public partial class PageDownloadInstallViewModel : ViewModelBase
     [ObservableProperty] private bool _showHintModOptiFine = true;
 
     [ObservableProperty] private bool _canStartInstall;
+
+    [ObservableProperty] private string _instanceName = "";
+
+    [ObservableProperty] private string _loadingText = "";
+
+    [ObservableProperty] private Thickness _panInnerMargin = new(25d, 10d, 25d, 25d);
+
+    [ObservableProperty] private bool _panSelectHitTestVisible;
+
+    [ObservableProperty] private bool _panMinecraftHitTestVisible = true;
+
+    [ObservableProperty] private bool _panBackHitTestVisible = true;
+
+    [ObservableProperty] private Brush _optiFineForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _liteLoaderForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _forgeForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _cleanroomForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _neoForgeForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _fabricForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _fabricApiForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _legacyFabricForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _legacyFabricApiForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _labyModForeground = ThemeManager.colorGray1;
+
+    [ObservableProperty] private Brush _optiFabricForeground = ThemeManager.colorGray1;
+
+    /// <summary>Fabric API 版本列表。</summary>
+    public ObservableCollection<FabricApiVersionRow> FabricApiVersions { get; } = [];
+
+    public void SetFabricApiVersions(IEnumerable<FabricApiVersionRow> rows)
+    {
+        FabricApiVersions.Clear();
+        foreach (var row in rows) FabricApiVersions.Add(row);
+    }
 }

@@ -3,8 +3,10 @@ using System.IO;
 using System.IO.Compression;
 using PCL.Core.App;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Hints;
 using PCL.Core.Logging;
 using PCL.Core.UI;
+using PCL.Core.UI.Dialogs;
 using PCL.Core.Utils;
 using PCL.Core.Utils.Exts;
 using PCL.Core.ViewModel;
@@ -48,16 +50,20 @@ public partial class PageSetupLogViewModel : ViewModelBase
 
     public async Task<bool> CleanAsync()
     {
-        var result = await ModMain.MyMsgBoxAsync(Lang.Text("Setup.Log.Clear.Confirm.Message"),
-            Lang.Text("Setup.Log.Clear.Confirm.Title"), Lang.Text("Common.Action.Confirm"),
-            Lang.Text("Common.Action.Cancel"), isWarn: true);
+        var result = (await Dialog.ShowAsync(new TextDialogRequest
+        {
+            Title = Lang.Text("Setup.Log.Clear.Confirm.Title"),
+            Content = Lang.Text("Setup.Log.Clear.Confirm.Message"),
+            Buttons = DialogButtons.OkCancel,
+            IsWarn = true
+        })).Button;
         if (result != 1)
             return false;
         var currentSet = new HashSet<string>(CurrentLogs);
         var cleaned = await RunAsync(ct => Task.Run(() => DeleteInactiveLogs(currentSet), ct));
         if (cleaned is not true)
             return false;
-        HintService.Hint(Lang.Text("Setup.Log.Clear.Success"), HintType.Success);
+        HintService.Show(Hints.Success(Lang.Text("Setup.Log.Clear.Success")));
         return true;
     }
 
@@ -76,7 +82,7 @@ public partial class PageSetupLogViewModel : ViewModelBase
             return;
         var written = await RunAsync(ct => Task.Run(() => WriteZip(selectedPath, tempDirName, sourceFiles), ct));
         if (written is true)
-            HintService.Hint(Lang.Text("Setup.Log.ExportSuccess"), HintType.Success);
+            HintService.Show(Hints.Success(Lang.Text("Setup.Log.ExportSuccess")));
     }
 
     private List<SetupLogEntry> BuildEntries()
@@ -123,7 +129,7 @@ public partial class PageSetupLogViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, "删除非当前日志文件失败", ModBase.LogLevel.Feedback,
+            Common.Log(ex, "删除非当前日志文件失败", Common.LogLevel.Feedback,
                 userSummary: Lang.Text("Setup.Error.OperationFailed"));
             return false;
         }
@@ -152,7 +158,7 @@ public partial class PageSetupLogViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex, Lang.Text("Setup.Log.ExportFailed"), ModBase.LogLevel.Hint,
+            Common.Log(ex, Lang.Text("Setup.Log.ExportFailed"), Common.LogLevel.Hint,
                 userSummary: Lang.Text("Setup.Log.ExportFailed"));
             return false;
         }

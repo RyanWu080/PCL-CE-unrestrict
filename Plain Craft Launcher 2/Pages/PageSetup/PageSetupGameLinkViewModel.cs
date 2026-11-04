@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using PCL.Core.App;
 using PCL.Core.App.Configuration;
 using PCL.Core.App.Localization;
+using PCL.Core.UI.Hints;
 using PCL.Core.Link.Scaffolding.EasyTier;
 using PCL.Core.ViewModel;
 
@@ -38,6 +39,39 @@ public partial class PageSetupGameLinkViewModel : ViewModelBase
     private string _udpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.UdpNatType",
         Lang.Text("Setup.GameLink.NetworkTest.NotTested"));
 
+    private CliNetTest.NetStatus? _lastStatus;
+
+    public void RefreshLocalization()
+    {
+        NetTestButtonText = Lang.Text(NetTestEnabled
+            ? "Setup.GameLink.NetworkTest.Start"
+            : "Setup.GameLink.NetworkTest.Testing");
+        if (_lastStatus is null)
+        {
+            UdpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.UdpNatType",
+                Lang.Text("Setup.GameLink.NetworkTest.NotTested"));
+            TcpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.TcpNatType",
+                Lang.Text("Setup.GameLink.NetworkTest.NotTested"));
+            Ipv6StatusText = Lang.Text("Setup.GameLink.NetworkTest.Ipv6Status",
+                Lang.Text("Setup.GameLink.NetworkTest.NotTested"));
+            return;
+        }
+
+        ApplyStatus(_lastStatus);
+    }
+
+    private void ApplyStatus(CliNetTest.NetStatus status)
+    {
+        UdpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.UdpNatType",
+            CliNetTest.GetNatTypeString(status.UdpNatType));
+        TcpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.TcpNatType",
+            CliNetTest.GetNatTypeString(status.TcpNatType));
+        Ipv6StatusText = Lang.Text("Setup.GameLink.NetworkTest.Ipv6Status",
+            status.SupportIPv6
+                ? Lang.Text("Setup.GameLink.NetworkTest.Supported")
+                : Lang.Text("Setup.GameLink.NetworkTest.Unsupported"));
+    }
+
     public void Reload()
     {
         LinkUsername = Config.Link.Username;
@@ -53,16 +87,16 @@ public partial class PageSetupGameLinkViewModel : ViewModelBase
         try
         {
             Config.Link.Reset();
-            ModBase.Log("[Setup] 已初始化联机页设置");
-            HintService.Hint(Lang.Text("Setup.GameLink.Initialized"), HintType.Success, false);
+            Common.Log("[Setup] 已初始化联机页设置");
+            HintService.Show(Hints.Success(Lang.Text("Setup.GameLink.Initialized"), log: false));
             Reload();
         }
         catch (Exception ex)
         {
-            ModBase.Log(
+            Common.Log(
                 ex,
                 Lang.Text("Setup.GameLink.Error.InitFailed"),
-                ModBase.LogLevel.Msgbox,
+                Common.LogLevel.Msgbox,
                 userSummary: Lang.Text("Setup.GameLink.Error.InitFailed"));
         }
 
@@ -82,10 +116,10 @@ public partial class PageSetupGameLinkViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            ModBase.Log(
+            Common.Log(
                 ex,
                 Lang.Text("Setup.GameLink.Error.ConfigChangeFailed"),
-                ModBase.LogLevel.Hint,
+                Common.LogLevel.Hint,
                 userSummary: Lang.Text("Setup.GameLink.Error.ConfigChangeFailed"));
         }
     }
@@ -99,20 +133,14 @@ public partial class PageSetupGameLinkViewModel : ViewModelBase
             var status = await RunAsync(ct => Task.Run(CliNetTest.GetNetStatusAsync, ct));
             if (status is null)
                 return;
-            UdpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.UdpNatType",
-                CliNetTest.GetNatTypeString(status.UdpNatType));
-            TcpNatTypeText = Lang.Text("Setup.GameLink.NetworkTest.TcpNatType",
-                CliNetTest.GetNatTypeString(status.TcpNatType));
-            Ipv6StatusText = Lang.Text("Setup.GameLink.NetworkTest.Ipv6Status",
-                status.SupportIPv6
-                    ? Lang.Text("Setup.GameLink.NetworkTest.Supported")
-                    : Lang.Text("Setup.GameLink.NetworkTest.Unsupported"));
+            _lastStatus = status;
+            ApplyStatus(status);
         }
         catch (Exception ex)
         {
-            ModBase.Log(ex,
+            Common.Log(ex,
                 "[Link] 获取网络测试结果失败",
-                ModBase.LogLevel.Hint,
+                Common.LogLevel.Hint,
                 userSummary: Lang.Text("Setup.GameLink.Error.NetworkTestFailed"));
         }
         finally
