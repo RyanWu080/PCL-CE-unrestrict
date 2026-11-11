@@ -110,7 +110,7 @@ def patch_source(source):
         return 'policy-disabled'
     raise RuntimeError('Region policy is missing; review upstream before publishing')
 
-def build(release_id):
+def official_release(release_id):
     if not release_id.isdigit():
         raise ValueError('Release ID must be numeric')
     release = api(f'repos/{UPSTREAM}/releases/{release_id}')
@@ -119,12 +119,26 @@ def build(release_id):
     tag = release['tag_name']
     if not re.fullmatch(r'v\d+\.\d+\.\d+(?:[-.][A-Za-z0-9]+)*', tag):
         raise ValueError('Unexpected tag')
+    return release
+
+
+def checkout_release(release_id):
+    tag = official_release(release_id)['tag_name']
+    source = Path('source').resolve()
+    run('git', 'clone', '--filter=blob:none', '--no-checkout', 'https://github.com/' + UPSTREAM + '.git', str(source))
+    run('git', 'checkout', '--detach', 'refs/tags/' + tag, cwd=source)
+
+
+
+def build(release_id):
+    release = official_release(release_id)
+    tag = release['tag_name']
     config = 'Beta' if release['prerelease'] else 'Release'
     source = Path('source').resolve()
     output = Path('release-assets').resolve()
-    run('git', 'clone', '--filter=blob:none', '--no-checkout', 'https://github.com/' + UPSTREAM + '.git', str(source))
-    run('git', 'checkout', '--detach', 'refs/tags/' + tag, cwd=source)
     commit = run('git', 'rev-parse', 'HEAD', cwd=source)
+    if commit != run('git', 'rev-parse', f'refs/tags/{tag}^{{commit}}', cwd=source):
+        raise RuntimeError('Checked-out commit does not match the official release tag')
     patch_mode = patch_source(source)
     output.mkdir()
     build_env = dict(os.environ, PCL_GITHUB_SHA=commit, describe=tag, PCL_WRITE_SECRET='1')
@@ -202,6 +216,8 @@ def publish(release_id):
 if __name__ == '__main__':
     if sys.argv[1] == 'scan':
         scan()
+    elif sys.argv[1] == 'checkout':
+        checkout_release(os.environ['UPSTREAM_RELEASE_ID'])
     elif sys.argv[1] == 'build':
         build(os.environ['UPSTREAM_RELEASE_ID'])
     elif sys.argv[1] == 'publish':

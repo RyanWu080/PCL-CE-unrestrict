@@ -41,9 +41,22 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      - name: Read SDK version from the official tag
+        id: sdk
+        env:
+          UPSTREAM_RELEASE_ID: ${{ matrix.id }}
+        run: |
+          python3 .github/release-sync/sync.py checkout
+          python3 .github/release-sync/dotnet_sdk.py resolve HEAD source
+      - id: setup-dotnet
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ steps.sdk.outputs.version }}
+          dotnet-quality: ${{ steps.sdk.outputs.quality }}
+      - name: Select the installed SDK
+        env:
+          INSTALLED_SDK: ${{ steps.setup-dotnet.outputs.dotnet-version }}
+        run: python3 .github/release-sync/dotnet_sdk.py pin "$INSTALLED_SDK" source
       - name: Build exact official tag without repository secrets
         env:
           UPSTREAM_RELEASE_ID: ${{ matrix.id }}
