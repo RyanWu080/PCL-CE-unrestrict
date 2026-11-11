@@ -20,8 +20,11 @@ def merge(source, upstream):
         # A failed merge without MERGE_HEAD is not a resolvable content conflict.
         run('git', 'rev-parse', '--verify', 'MERGE_HEAD', cwd=source)
         conflicts = run('git', 'diff', '--name-only', '--diff-filter=U', cwd=source).splitlines()
-        if any(path != POLICY for path in conflicts) or (result.returncode and not conflicts):
-            raise RuntimeError('Upstream merge conflicted outside the reviewed policy')
+        if any(path != POLICY and not path.startswith('.github/workflows/') for path in conflicts) or (result.returncode and not conflicts):
+            raise RuntimeError('Upstream merge conflicted outside the reviewed policy and fork workflows')
+        # The Actions token cannot push changes to workflow files.
+        run('git', 'restore', '--source=HEAD', '--staged', '--worktree', '--',
+            '.github/workflows', cwd=source)
         shutil.copyfile(ROOT / 'RestrictedFeaturePolicy.cs', source / POLICY)
         run('git', 'add', '--', POLICY, cwd=source)
         if run('git', 'rev-parse', f':{POLICY}', cwd=source) != expected:
