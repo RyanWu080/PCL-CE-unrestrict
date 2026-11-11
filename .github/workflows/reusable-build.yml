@@ -23,27 +23,36 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set Describe
         run: |
           describe=`git describe --tags --always`
           echo "describe=$describe" >> $GITHUB_ENV
 
+      - name: Read SDK version from the merged upstream commit
+        id: sdk
+        run: |
+          git fetch --no-tags https://github.com/PCL-Community/PCL-CE.git refs/heads/dev
+          upstream=$(git merge-base HEAD FETCH_HEAD)
+          python3 .github/release-sync/dotnet_sdk.py resolve "$upstream"
+
       - name: Setup .NET SDK
+        id: setup-dotnet
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ steps.sdk.outputs.version }}
+          dotnet-quality: ${{ steps.sdk.outputs.quality }}
+      - name: Select the installed SDK
+        env:
+          INSTALLED_SDK: ${{ steps.setup-dotnet.outputs.dotnet-version }}
+        run: python3 .github/release-sync/dotnet_sdk.py pin "$INSTALLED_SDK"
 
       - name: Build Project
         env:
           PCL_WRITE_SECRET: '1'
-          PCL_MS_CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          PCL_CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-          PCL_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          PCL_NAID_CLIENT_ID: ${{ secrets.NAID_CLIENT_ID }}
-          PCL_NAID_CLIENT_SECRET: ${{ secrets.NAID_CLIENT_SECRET }}
-          PCL_LINK_SERVER_ROOT: ${{ secrets.LINK_SERVER_ROOTS }}
-          PCL_LOBBY_DEFAULT_SECRET: ${{ secrets.LOBBY_DEFAULT_SECRET }}
           PCL_GITHUB_SHA: ${{ github.sha }}
         run: |
           dotnet publish "Plain Craft Launcher 2/Plain Craft Launcher 2.csproj" \
