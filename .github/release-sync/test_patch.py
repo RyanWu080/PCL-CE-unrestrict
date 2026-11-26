@@ -72,6 +72,22 @@ class PolicyPatchTests(unittest.TestCase):
         self.assertTrue(merge(self.source, 'upstream'))
         self.assertEqual(self.policy.read_bytes(), self.patch)
 
+    def test_migrate_to_bridge_and_repeat_sync(self):
+        self.git('checkout', 'upstream')
+        self.policy.unlink()
+        bridge = self.source / sync.BRIDGE
+        bridge.parent.mkdir(parents=True)
+        bridge.write_bytes((ROOT / 'reviewed-bridge.cs').read_bytes())
+        self.commit('migrate to Avalonia')
+        self.assertEqual(sync.patch_source(self.source), 'policy-disabled')
+        self.git('restore', '--', sync.BRIDGE)
+        self.git('checkout', 'custom')
+        self.assertTrue(merge(self.source, 'upstream'))
+        self.assertFalse(self.policy.exists())
+        self.assertEqual(bridge.read_bytes(), (ROOT / 'RestrictedFeaturesBridge.cs').read_bytes())
+        self.assertFalse(merge(self.source, 'upstream'))
+        self.assertEqual(self.git('status', '--porcelain'), '')
+
     def test_unknown_upstream_stops_before_merge(self):
         self.upstream(policy=self.reviewed + b'// new policy\n')
         before = self.git('rev-parse', 'HEAD')

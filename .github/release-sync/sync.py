@@ -21,6 +21,8 @@ EXPECTED_BLOBS = {
     '3808741c26e439789086dcf3ad3c83867d53eaf7',  # WPF/Core split.
     'cef7848c68a122660c17eee07a614008d2cc91a4',  # dev 16207f9: simplified region hint.
 }
+BRIDGE = 'PCL.Launcher/UI/Bridges/RestrictedFeaturesBridge.cs'
+REVIEWED = {POLICY: EXPECTED_BLOBS, BRIDGE: {'6ca5e6bbb866431e11148d86ad3ba0d53c9434b6'}}
 MARKER = 'unrestrict-build.json'
 ROOT = Path(__file__).resolve().parent
 
@@ -96,19 +98,27 @@ def scan():
 def run(*args, cwd=None, env=None):
     return subprocess.check_output(args, cwd=cwd, env=env, text=True).strip()
 
+def policy_path(source, ref):
+    paths = run('git', 'ls-tree', '-r', '--name-only', ref, '--', *REVIEWED, cwd=source).splitlines()
+    if len(paths) != 1:
+        raise RuntimeError(f'Expected one reviewed policy path at {ref}, found {paths}')
+    return paths[0]
+
+
 def verify_policy(source, ref='HEAD'):
-    blob = run('git', 'rev-parse', f'{ref}:{POLICY}', cwd=source)
-    if blob not in EXPECTED_BLOBS:
+    path = policy_path(source, ref)
+    blob = run('git', 'rev-parse', f'{ref}:{path}', cwd=source)
+    if blob not in REVIEWED[path]:
         raise RuntimeError(f'Upstream region policy changed ({blob}); review patch before publishing')
+    return path
+
 
 def patch_source(source):
-    path = source / POLICY
-    if path.exists():
-        if run('git', 'hash-object', POLICY, cwd=source) not in EXPECTED_BLOBS:
-            raise RuntimeError('Upstream region policy changed; review patch before publishing')
-        shutil.copyfile(ROOT / 'RestrictedFeaturePolicy.cs', path)
-        return 'policy-disabled'
-    raise RuntimeError('Region policy is missing; review upstream before publishing')
+    path = policy_path(source, 'HEAD')
+    if run('git', 'hash-object', path, cwd=source) not in REVIEWED[path]:
+        raise RuntimeError('Upstream region policy changed; review patch before publishing')
+    shutil.copyfile(ROOT / Path(path).name, source / path)
+    return 'policy-disabled'
 
 def official_release(release_id):
     if not release_id.isdigit():
@@ -155,7 +165,7 @@ def build(release_id):
         shutil.copyfile(binary, output / f'PCL2_CE_{config}_{arch}_unrestrict.exe')
     manifest = {'upstream': UPSTREAM, 'release_id': release['id'], 'tag': tag,
         'upstream_commit': commit, 'configuration': config, 'patch_mode': patch_mode,
-        'patch_sha256': hashlib.sha256((ROOT / 'RestrictedFeaturePolicy.cs').read_bytes()).hexdigest(),
+        'patch_sha256': hashlib.sha256((ROOT / Path(policy_path(source, 'HEAD')).name).read_bytes()).hexdigest(),
         'notice': 'Unofficial unrestricted rebuild. Original release notes are copied verbatim; upstream signatures and download links do not apply to these modified binaries.',
         'sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in output.glob('*.exe')}}
     (output / MARKER).write_text(json.dumps(manifest, indent=2), encoding='utf-8')
